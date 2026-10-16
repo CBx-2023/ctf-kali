@@ -34,6 +34,12 @@ ENV PATH="/opt/venv/bin:${PATH}" \
     HOME=/home/ctf PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
     DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
     CTF_WORKSPACE=/workspace
+RUN apt-get update && apt-get install -y --no-install-recommends sudo \
+    && printf '%s\n' 'ctf ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/ctf \
+    && chmod 0440 /etc/sudoers.d/ctf \
+    && visudo -cf /etc/sudoers.d/ctf \
+    && dpkg-query -W > /usr/local/share/ctf-system-packages.txt \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 USER ctf
 WORKDIR /workspace
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint"]

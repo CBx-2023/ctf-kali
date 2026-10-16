@@ -90,6 +90,28 @@ ctf claude -p "检查当前目录结构"
 
 Python 解释器为 `/opt/venv/bin/python`。容器内也有 `ctf`，支持 `ctf`、`ctf -p "任务"`、`ctf check` 和 `ctf run`。
 
+### 容器权限与免密 sudo
+
+默认用户 `ctf` 已配置免密 sudo，可在容器终端中执行：
+
+```bash
+sudo -n whoami              # 应输出 root
+sudo apt-get update
+```
+
+配置由 Dockerfile 写入 `/etc/sudoers.d/ctf`，权限为 `0440`，构建时通过 `visudo` 校验。它允许 `ctf` 以任意用户执行命令，无需 root 密码；作用范围是容器内部。
+
+已有环境拉取此更新后，在本机执行：
+
+```bash
+git pull
+ctf build
+ctf recreate
+ctf code
+```
+
+临时安装的软件在重建容器后会丢失；团队需要的工具应加入 Dockerfile。
+
 ## 5. 日常协作
 
 源码通过目录挂载同步。每人使用自己的代码分支和 Docker 引擎，合并前运行离线检查和调度测试。
