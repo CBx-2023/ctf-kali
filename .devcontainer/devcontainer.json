@@ -1,0 +1,10 @@
+{
+  "name": "CTF Kali + Claude",
+  "build": {"dockerfile": "../Dockerfile", "context": ".."},
+  "remoteUser": "ctf",
+  "workspaceFolder": "/workspaces/ctf-kali",
+  "runArgs": ["--env-file", "${localWorkspaceFolder}/.env"],
+  "mounts": ["source=${localWorkspaceFolder}/workspace,target=/workspace,type=bind"],
+  "overrideCommand": true,
+  "customizations": {"vscode": {"settings": {"python.defaultInterpreterPath": "/opt/venv/bin/python", "terminal.integrated.defaultProfile.linux": "bash"}}}
+}

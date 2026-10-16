@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+case "${1:-claude}" in
+  check|doctor|run|test) exec entrypoint "$@" ;;
+  shell) exec bash ;;
+  claude) [ $# -eq 0 ] || shift; exec claude "$@" ;;
+  *) exec claude "$@" ;;
+esac

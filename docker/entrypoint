@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+case "${1:-run}" in
+  run) shift; exec python /opt/ctf/app/runner.py "$@" ;;
+  check) exec python /opt/ctf/app/check.py ;;
+  doctor) exec python /opt/ctf/app/runner.py --check-connectivity ;;
+  test) exec python -m unittest discover -s /opt/ctf/tests -v ;;
+  *) exec "$@" ;;
+esac

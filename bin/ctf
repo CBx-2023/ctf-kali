@@ -1,0 +1,62 @@
+#!/bin/bash
+set -euo pipefail
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ "$src" = /* ]] || src="$dir/$src"
+done
+root="$(cd "$(dirname "$src")/.." && pwd)"
+image="${CTF_IMAGE:-ctf-kali:dev}"
+name="ctf-kali-dev"
+cmd="${1:-claude}"
+[ $# -eq 0 ] || shift
+build() { docker buildx build --load -t "$image" "$root"; }
+ensure() {
+  docker image inspect "$image" >/dev/null 2>&1 || build
+  if ! docker container inspect "$name" >/dev/null 2>&1; then
+    local opts=()
+    [ ! -f "$root/.env" ] || opts+=(--env-file "$root/.env")
+    docker run -d --name "$name" "${opts[@]}" \
+      -v "$root:/workspaces/ctf-kali" -v "$root/workspace:/workspace" \
+      -v ctf-kali-home:/home/ctf -w /workspaces/ctf-kali \
+      "$image" sleep infinity >/dev/null
+  fi
+  docker start "$name" >/dev/null
+}
+case "$cmd" in
+  build) build ;;
+  up) ensure; echo "$name running" ;;
+  down) docker stop -t 15 "$name" ;;
+  recreate) docker rm -f "$name" >/dev/null 2>&1 || true; ensure ;;
+  pack)
+    platform="${CTF_PLATFORM:-linux/amd64}"
+    tag="ctf-kali:submit-${platform##*/}"
+    docker buildx build --platform "$platform" --load -t "$tag" "$root"
+    docker run --rm --network none "$tag" check
+    mkdir -p "$root/dist"
+    docker save "$tag" | gzip > "$root/dist/agent-${platform##*/}.tar.gz"
+    python3 - "$root/dist/agent-${platform##*/}.tar.gz" <<'PY'
+import os,sys
+p=sys.argv[1]; size=os.path.getsize(p)
+print(p, f'{size/1e9:.3f} GB')
+if size>3_000_000_000: raise SystemExit('Exceeds 3GB upload limit')
+PY
+    ;;
+  code)
+    ensure
+    authority="$(python3 -c 'import sys;print(sys.argv[1].encode().hex())' "$name")"
+    code --folder-uri "vscode-remote://attached-container+$authority/workspaces/ctf-kali"
+    ;;
+  claude|shell|check|test|doctor|run)
+    ensure
+    opts=(-i)
+    [ ! -t 0 ] || opts+=(-t)
+    case "$cmd" in
+      claude) exec docker exec "${opts[@]}" -w /workspace "$name" claude "$@" ;;
+      shell) exec docker exec "${opts[@]}" "$name" bash "$@" ;;
+      check|test) exec docker exec "${opts[@]}" "$name" entrypoint "$cmd" "$@" ;;
+      doctor|run) exec docker exec "${opts[@]}" "$name" python /workspaces/ctf-kali/app/runner.py $([ "$cmd" != doctor ] || echo --check-connectivity) "$@" ;;
+    esac ;;
+  *) echo 'Usage: ctf [claude|shell|up|down|build|recreate|check|doctor|run|pack|code]'; exit 2 ;;
+esac

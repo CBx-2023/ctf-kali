@@ -1,0 +1,13 @@
+**
+!Dockerfile
+!requirements.lock
+!app/
+!app/**
+!tests/
+!tests/**
+!prompts/
+!prompts/**
+!docker/
+!docker/**
+**/__pycache__
+**/*.pyc

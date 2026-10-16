@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/local/libexec/claude --append-system-prompt-file /opt/ctf/prompts/override.md "$@"
